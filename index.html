@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Переводчик на Пехлеви</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f4f1ea;
+            color: #2c241b;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        h1 {
+            text-align: center;
+            color: #5c3a21;
+            font-size: 24px;
+        }
+        .column {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #c8b9a6;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: none;
+            box-sizing: border-box;
+        }
+        #pahlavi-output {
+            font-family: 'Noto Sans Inscriptional Pahlavi', sans-serif;
+            font-size: 28px;
+            direction: rtl;
+            background-color: #fffdf9;
+        }
+        button {
+            width: 100%;
+            background-color: #8b5a2b;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        button:active {
+            background-color: #6e451e;
+        }
+        .hint-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e9e2d5;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+        .note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Переводчик на Пехлеви</h1>
+    
+    <div class="column">
+        <label for="source-text">Введите текст на русском:</label>
+        <textarea id="source-text" placeholder="Например: шах свет огонь мир сердце человек..."></textarea>
+    </div>
+
+    <button onclick="translateText()">Перевести на пехлеви</button>
+
+    <div class="column" style="margin-top: 15px;">
+        <label for="pahlavi-output">Письмо Пехлеви (Inscriptional):</label>
+        <textarea id="pahlavi-output" readonly placeholder="𐭱𐭠𐭧"></textarea>
+    </div>
+
+    <div class="hint-box" id="transcription-hint">Транскрипция: —</div>
+    <p class="note">* Слова из базы переводятся точно. Незнакомые слова автоматически транслитерируются буквами пехлеви.</p>
+
+    <script>
+        // Расширенный словарь среднеперсидского языка (Пехлеви)
+        const dictionary = {
+            // Природа и стихии
+            "огонь": ["ādur", "𐭠𐭲𐭥𐭥"],
+            "вода": ["āb", "𐭠𐭯"],
+            "земля": ["zamīg", "𐭦𐭬𐭩𐭪"],
+            "ветер": ["wād", "𐭥𐭠𐭲"],
+            "небо": ["asmān", "𐭠𐭮𐭬𐭠𐭭"],
+            "солнце": ["xwaršēd", "𐭧𐭥𐭫𐭱𐭩𐭲"],
+            "луна": ["māh", "𐭬𐭠𐭧"],
+            "звезда": ["stārag", "𐭮𐭲𐭠𐭫𐭪"],
+            "свет": ["rōšn", "𐭫𐭥𐭱𐭭"],
+            "тьма": ["tārīg", "𐭲𐭠𐭫𐭩𐭪"],
+            "гора": ["kōf", "𐭪𐭥𐭯"],
+            "море": ["zrēh", "𐭦𐭫𐭩𐭧"],
+            "дерево": ["draxt", "𐭣𐭫𐭧𐭲"],
+
+            // Люди и общество
+            "человек": ["mardōm", "𐭬𐭫𐭲𐭥𐭬"],
+            "мужчина": ["mard", "𐭬𐭫𐭲"],
+            "женщина": ["zan", "𐭦𐭭"],
+            "отец": ["pid", "𐭯𐭩𐭲"],
+            "мать": ["mād", "𐭬𐭠𐭲"],
+            "сын": ["pus", "𐭯𐭥𐭮"],
+            "дочь": ["duxt", "𐭣𐭥𐭧𐭲"],
+            "брат": ["brād", "𐭡𐭫𐭠𐭲"],
+            "друг": ["dōst", "𐭣𐭥𐭮𐭲"],
+            "враг": ["dušmen", "𐭣𐭥𐭱𐭬𐭭"],
+            "шах": ["šāh", "𐭱𐭠𐭧"],
+            "царь": ["šāh", "𐭱𐭠𐭧"],
+            "воин": ["artēštār", "𐭠𐭫𐭲𐭩𐭱𐭲𐭠𐭫"],
+            "жрец": ["mowbed", "𐭬𐭥𐭯𐭲"],
+
+            // Религия и абстрактные понятия
+            "бог": ["yazdān", "𐭩𐭦𐭣𐭠𐭭"],
+            "мир": ["gēhān", "𐭢𐭩𐭧𐭠𐭭"],
+            "жизнь": ["gyān", "𐭢𐭩𐭠𐭭"],
+            "смерть": ["marg", "𐭬𐭫𐭢"],
+            "душа": ["ruwān", "𐭫𐭥𐭠𐭭"],
+            "правда": ["rāstīh", "𐭫𐭠𐭮𐭲𐭩𐭧"],
+            "истина": ["ašawīh", "𐭠𐭱𐭥𐭩𐭧"],
+            "ложь": ["drōg", "𐭣𐭫𐭥𐭢"],
+            "добро": ["nēkīh", "𐭭𐭩𐭪𐭩𐭧"],
+            "зло": ["wadīh", "𐭥𐭲𐭩𐭧"],
+            "мудрость": ["xrad", "𐭧𐭫𐭲"],
+            "слава": ["xwarrah", "𐭧𐭥𐭫𐭧"],
+            "имя": ["nām", "𐭭𐭠𐭬"],
+            "слово": ["saxwan", "𐭮𐭧𐭥𐭭"],
+            "вера": ["dēn", "𐭣𐭩𐭭"],
+
+            // Тело и предметы
+            "сердце": ["dil", "𐭣𐭩𐭫"],
+            "рука": ["dast", "𐭣𐭮𐭲"],
+            "глаз": ["čašm", "𐭰𐭱𐭬"],
+            "голова": ["sar", "𐭮𐭫"],
+            "кровь": ["xōn", "𐭧𐭥𐭭"],
+            "дом": ["xānag", "𐭧𐭠𐭭𐭪"],
+            "город": ["šahr", "𐭱𐭧𐭫"],
+            "дорога": ["rāh", "𐭫𐭠𐭧"],
+            "книга": ["nāmag", "𐭭𐭠𐭬𐭪"],
+            "золото": ["zarr", "𐭦𐭫"],
+            "серебро": ["asēm", "𐭠𐭮𐭩𐭬"],
+            "хлеб": ["nān", "𐭭𐭠𐭭"],
+            "вино": ["may", "𐭬𐭩"],
+
+            // Прилагательные и местоимения
+            "я": ["an", "𐭠𐭭"],
+            "ты": ["tō", "𐭲𐭥"],
+            "он": ["ōy", "𐭠𐭥𐭩"],
+            "мы": ["amāh", "𐭠𐭬𐭠𐭧"],
+            "большой": ["wuzurg", "𐭥𐭦𐭥𐭫𐭢"],
+            "маленький": ["kōdak", "𐭪𐭥𐭲𐭪"],
+            "хороший": ["xūb", "𐭧𐭥𐭯"],
+            "плохой": ["wad", "𐭥𐭲"],
+            "новый": ["nōg", "𐭭𐭥𐭪"],
+            "старый": ["kahwan", "𐭪𐭧𐭥𐭭"],
+            "сильный": ["zōrmand", "𐭦𐭥𐭫𐭬𐭭𐭲"]
+        };
+
+        const charMap = {
+            'а': '𐭠', 'б': '𐭡', 'в': '𐭥', 'г': '𐭢', 'д': '𐭣',
+            'е': '𐭩', 'ж': '𐭦', 'з': '𐭦', 'и': '𐭩', 'й': '𐭩',
+            'к': '𐭪', 'л': '𐭫', 'м': '𐭬', 'н': '𐭭', 'о': '𐭥',
+            'п': '𐭯', 'р': '𐭫', 'с': '𐭮', 'т': '𐭲', 'у': '𐭥',
+            'ф': '𐭯', 'х': '𐭧', 'ц': '𐭰', 'ч': '𐭰', 'ш': '𐭱',
+            'щ': '𐭱', 'ы': '𐭩', 'э': '𐭠', 'ю': '𐭩𐭥', 'я': '𐭩𐭠'
+        };
+
+        function translateText() {
+            const input = document.getElementById('source-text').value.trim().toLowerCase();
+            const outputField = document.getElementById('pahlavi-output');
+            const hintField = document.getElementById('transcription-hint');
+
+            if (!input) {
+                outputField.value = "";
+                hintField.innerText = "Транскрипция: —";
+                return;
+            }
+
+            const words = input.split(/\s+/);
+            let translatedWords = [];
+            let transcriptions = [];
+
+            words.forEach(word => {
+                const cleanWord = word.replace(/[.,!?—-]/g, '');
+                if (!cleanWord) return;
+                
+                if (dictionary[cleanWord]) {
+                    transcriptions.push(dictionary[cleanWord]);
+                    translatedWords.push(dictionary[cleanWord]);
+                } else {
+                    let translit = "";
+                    for (let char of cleanWord) {
+                        translit += charMap[char] || "";
+                    }
+                    transcriptions.push(`[${cleanWord}]`);
+                    translatedWords.push(translit);
+                }
+            });
+
+            outputField.value = translatedWords.join(" ");
+            hintField.innerText = "Транскрипция: " + transcriptions.join(" ");
+        }
+    </script>
+</body>
+</html>
